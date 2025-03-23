@@ -16,6 +16,9 @@ typedef enum {
 extern Scene currentScene;
 extern Scene nextScene;
 extern bool quit;
+extern HANDLE hScreenBuffer[2];
+extern int currentBuffer;
+extern char buffer[2][HEIGHT][WIDTH + 1];
 
 void gameInitialize();
 void gameUpdate();

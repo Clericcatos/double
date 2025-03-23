@@ -12,10 +12,31 @@
 Scene currentScene = MENU;
 Scene nextScene = MENU;
 bool quit = false;
-char buffer[2][HEIGHT][WIDTH + 1];
+char buffer[2][HEIGHT][WIDTH + 1];  // 텍스트 버퍼
 int currentBuffer = 0;
+HANDLE hScreenBuffer[2];  // 콘솔 화면 버퍼
+
 
 void gameInitialize()
+{
+    hScreenBuffer[0] = CreateConsoleScreenBuffer(
+        GENERIC_WRITE,
+        FILE_SHARE_WRITE,
+        NULL,
+        CONSOLE_TEXTMODE_BUFFER,
+        NULL);
+
+    hScreenBuffer[1] = CreateConsoleScreenBuffer(
+        GENERIC_WRITE,
+        FILE_SHARE_WRITE,
+        NULL,
+        CONSOLE_TEXTMODE_BUFFER,
+        NULL);
+
+    SetConsoleActiveScreenBuffer(hScreenBuffer[currentBuffer]);
+}
+
+void gameUpdate()
 {
     if (currentScene != nextScene)
     {
@@ -28,19 +49,13 @@ void gameInitialize()
             playInitialize();
             break;
         case END:
-            Time::Initialize();
             endInitialize();
             break;
         }
         currentScene = nextScene;
     }
-}
 
-void gameUpdate()
-{
-    Input::Update();
-
-    switch (nextScene)
+    switch (currentScene)
     {
     case MENU:
         menuUpdate();
@@ -52,57 +67,54 @@ void gameUpdate()
         endUpdate();
         break;
     }
-
-    if (currentScene != nextScene)
-    {
-        gameInitialize();
-    }
-    currentScene = nextScene;
 }
 
 void gameRender()
 {
     char(*backBuffer)[WIDTH + 1] = buffer[1 - currentBuffer];
-    char(*primaryBuffer)[WIDTH + 1] = buffer[currentBuffer];
 
+    // 버퍼 초기화
     for (int i = 0; i < HEIGHT; i++)
     {
-        memset(backBuffer[i], ' ', WIDTH); // 공백 문자로 버퍼 초기화
+        memset(backBuffer[i], ' ', WIDTH);
         backBuffer[i][WIDTH] = '\0';
     }
 
+    // 씬 렌더링
     switch (currentScene)
     {
-    case MENU:
-        menuRender(backBuffer);
-        break;
-    case PLAY:
-        playRender(backBuffer);
-        break;
-    case END:
-        endRender(backBuffer);
-        break;
+    case MENU: menuRender(backBuffer); break;
+    case PLAY: playRender(backBuffer); break;
+    case END: endRender(backBuffer); break;
     }
 
-    // 변경된 부분만 화면 버퍼로 복사 및 출력
-    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    COORD coord;
-    DWORD written;
+    // 콘솔 화면 버퍼로 데이터 출력
+    DWORD charsWritten;
 
     for (int i = 0; i < HEIGHT; i++)
     {
-        for (int j = 0; j < WIDTH; j++)
+        COORD coord;
+        coord.X = 0;
+        coord.Y = (SHORT)i; // (SHORT) 캐스팅 (정상적인 변환인지 확인)
+
+        // 버퍼 핸들 체크
+        if (hScreenBuffer[1 - currentBuffer] != INVALID_HANDLE_VALUE)
         {
-            if (primaryBuffer[i][j] != backBuffer[i][j])
+            if (!WriteConsoleOutputCharacterA(hScreenBuffer[1 - currentBuffer], backBuffer[i], WIDTH, coord, &charsWritten))
             {
-                coord.X = j;
-                coord.Y = i;
-                SetConsoleCursorPosition(hConsole, coord);
-                WriteConsoleA(hConsole, &backBuffer[i][j], 1, &written, NULL);
-                primaryBuffer[i][j] = backBuffer[i][j];
+                printf("WriteConsoleOutputCharacterA failed! Error code: %lu\n", GetLastError());
             }
         }
     }
 
+    // 콘솔 버퍼 변경
+    SetConsoleActiveScreenBuffer(hScreenBuffer[1 - currentBuffer]);
     currentBuffer = 1 - currentBuffer;
+}
+
+void gameShutdown()
+{
+    // 콘솔 화면 버퍼 해제
+    CloseHandle(hScreenBuffer[0]);
+    CloseHandle(hScreenBuffer[1]);
 }

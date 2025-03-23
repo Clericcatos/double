@@ -8,9 +8,7 @@ int playerX = WIDTH / 2;
 int playerY = HEIGHT / 2;
 
 void playInitialize() 
-{
-	// Clear the console screen
-	system("cls");
+{	
 	playerX = WIDTH / 2;
 	playerY = HEIGHT / 2;
 }

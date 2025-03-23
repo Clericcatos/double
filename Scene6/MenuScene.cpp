@@ -9,8 +9,6 @@ int MENUY = HEIGHT / 2;
 
 void menuInitialize()
 {
-    // Clear the console screen
-    system("cls");
     MENUX = WIDTH / 2;
     MENUY = HEIGHT / 2;
 }
